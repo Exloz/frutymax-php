@@ -1,39 +1,44 @@
 version: '3.8'
 
+networks:
+    # red interna para base de datos y PHP-FPM
+    backend:
+        driver: bridge
+    # red proxy compartida con Traefik
+    proxy:
+        external: true
+
 services:
     app:
         build:
             context: .
             dockerfile: Dockerfile
             target: app
-        image: exloz_app:latest
+        image: frutymax_app:latest
         env_file:
             - .env
         restart: unless-stopped
+
+        # Exponemos sólo al proxy, no a puertos host
         expose:
             - "9000"
+
+        # Conecta a ambas redes: proxy para Traefik, backend para DB
         networks:
+            - proxy
             - backend
 
-    nginx:
-        image: nginx:stable-alpine
-        container_name: exloz_nginx
-        ports:
-            - "80:80"
-            - "443:443"
-        volumes:
-            - /etc/nginx/certs/exloz.site/fullchain.pem:/etc/nginx/certs/fullchain.pem:ro
-            - /etc/nginx/certs/exloz.site/privkey.pem:/etc/nginx/certs/privkey.pem:ro
-            - ./nginx/conf.d:/etc/nginx/conf.d:ro,Z
-            - ./:/var/www/html:ro,Z
-        depends_on:
-            - app
-        networks:
-            - backend
+        # Labels de Traefik para publicar tu app en https://exloz.site
+        labels:
+            - "traefik.enable=true"
+            - "traefik.http.routers.exloz.rule=Host(`frutymax.exloz.site`)"
+            - "traefik.http.routers.exloz.entrypoints=websecure"
+            - "traefik.http.routers.exloz.tls.certresolver=le"
+            - "traefik.http.services.exloz.loadbalancer.server.port=9000"
+
 
     db:
         image: mysql:8.0
-        container_name: exloz_mysql
         restart: unless-stopped
         environment:
             MYSQL_ROOT_PASSWORD: ${DB_PASSWORD}
@@ -42,14 +47,8 @@ services:
             MYSQL_PASSWORD:    ${DB_PASSWORD}
         volumes:
             - mysql_data:/var/lib/mysql:Z
-        ports:
-            - "3306:3306"
         networks:
             - backend
-
-networks:
-    backend:
-        driver: bridge
 
 volumes:
     mysql_data:
