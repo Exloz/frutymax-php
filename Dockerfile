@@ -1,73 +1,50 @@
-# Etapa 1: Build de assets con Node
-FROM node:20-alpine AS node-build
+# Dockerfile (ubicado en la raíz del proyecto)
 
-WORKDIR /app
-
-# Copiar archivos necesarios para instalar dependencias
-COPY package.json package-lock.json* pnpm-lock.yaml* yarn.lock* ./
-
-RUN npm ci
-
-# Copiar código fuente necesario para el build de Vite
-COPY resources ./resources
-COPY public ./public
-COPY vite.config.* ./
-COPY tsconfig.* ./
-
-RUN npm run build
-
-# Etapa 2: Dependencias PHP y Composer
-FROM composer:2.7 AS composer-deps
-
-WORKDIR /app
-
-COPY composer.json composer.lock ./
-COPY artisan ./
-COPY bootstrap ./bootstrap
-COPY routes ./routes
-COPY config ./config
-COPY app ./app
-
-RUN composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction
-
-# Etapa 3: Imagen final de producción
-FROM php:8.2-fpm-alpine
-
-# Instala extensiones necesarias
-RUN apk add --no-cache \
-    icu-dev \
-    libpng-dev \
-    libjpeg-turbo-dev \
-    libzip-dev \
-    oniguruma-dev \
-    zip \
-    unzip \
-    git \
-    curl \
-    bash \
-    && docker-php-ext-install intl pdo pdo_mysql mbstring zip exif pcntl
+### Etapa 1: construir assets con Node.js y Vite ###
+FROM node:20-alpine AS assets
 
 WORKDIR /var/www/html
 
-# Copia dependencias PHP
-COPY --from=composer-deps /app/vendor ./vendor
+# instalar dependencias de JS
+COPY package.json package-lock.json ./
+COPY vite.config.js tailwind.config.js postcss.config.js tsconfig.json ./
+COPY resources/ resources/
 
-# Copia código fuente Laravel (puedes filtrar si lo deseas)
+RUN npm ci \
+ && npm run build
+
+### Etapa 2: preparar PHP-FPM y composer ###
+FROM php:8.2-fpm-alpine AS app
+
+WORKDIR /var/www/html
+
+# instalar dependencias de sistema y extensiones PHP
+RUN apk add --no-cache \
+      bash git libzip-dev oniguruma-dev libpng-dev curl-dev zip unzip \
+ && docker-php-ext-install pdo_mysql mbstring zip exif pcntl bcmath
+
+# copiar binario de composer desde la imagen oficial
+COPY --from=composer:2 /usr/bin/composer /usr/bin/composer
+
+# ajustar PHP-FPM para escuchar en el puerto 9000
+RUN sed -i 's|^listen = .*|listen = 9000|' /usr/local/etc/php-fpm.d/www.conf
+
+# copiar código de aplicación
 COPY . .
 
-# Copia los assets compilados de Vite
-COPY --from=node-build /app/public/build ./public/build
+# copiar assets compilados
+COPY --from=assets /var/www/html/public/build public/build
 
-# Asegura que los directorios clave tengan los permisos correctos
-RUN chown -R www-data:www-data \
-    /var/www/html/storage \
-    /var/www/html/bootstrap/cache
+# instalar dependencias de PHP y cachear configuración
+RUN composer install --optimize-autoloader --no-dev --no-interaction \
+ && php artisan config:cache \
+ && php artisan route:cache \
+ && php artisan view:cache
 
-# Variables de entorno para producción
-ENV APP_ENV=production \
-    APP_DEBUG=false \
-    LOG_CHANNEL=stderr
+# permisos
+RUN chown -R www-data:www-data storage bootstrap/cache
 
 EXPOSE 9000
 
+# comando por defecto
 CMD ["php-fpm"]
