@@ -68,6 +68,6 @@ ENV APP_ENV=production \
     APP_DEBUG=false \
     LOG_CHANNEL=stderr
 
-EXPOSE 3000
+EXPOSE 9000
 
 CMD ["php-fpm"]
