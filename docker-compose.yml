@@ -22,8 +22,9 @@ services:
             - "80:80"
             - "443:443"
         volumes:
-            - ./nginx/conf.d:/etc/nginx/conf.d:Z
-            - /etc/letsencrypt:/etc/letsencrypt:Z            # certificados gestionados en el host
+            - /etc/nginx/certs/exloz.site/fullchain.pem:/etc/nginx/certs/fullchain.pem:ro
+            - /etc/nginx/certs/exloz.site/privkey.pem:/etc/nginx/certs/privkey.pem:ro
+            - ./nginx/conf.d:/etc/nginx/conf.d:ro,Z
             - ./:/var/www/html:ro,Z
         depends_on:
             - app
