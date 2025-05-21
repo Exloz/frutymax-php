@@ -18,6 +18,10 @@ WORKDIR /app
 COPY composer.json composer.lock ./
 COPY artisan ./
 COPY bootstrap ./bootstrap
+COPY routes ./routes
+COPY config ./config
+COPY app ./app
+
 RUN composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction
 
 # Etapa 3: Imagen final de producción
