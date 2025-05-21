@@ -7,7 +7,7 @@ WORKDIR /var/www/html
 
 # instalar dependencias de JS
 COPY package.json package-lock.json ./
-COPY vite.config.js tailwind.config.js postcss.config.js tsconfig.json ./
+COPY vite.config.ts tsconfig.json ./
 COPY resources/ resources/
 
 RUN npm ci \
