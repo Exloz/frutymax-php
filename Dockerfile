@@ -16,6 +16,8 @@ FROM composer:2.7 AS composer-deps
 WORKDIR /app
 
 COPY composer.json composer.lock ./
+COPY artisan ./
+COPY bootstrap ./bootstrap
 RUN composer install --no-dev --prefer-dist --optimize-autoloader --no-interaction
 
 # Etapa 3: Imagen final de producción
