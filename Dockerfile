@@ -13,7 +13,6 @@ COPY resources ./resources
 COPY public ./public
 COPY vite.config.* ./
 COPY tsconfig.* ./
-COPY .env .env
 
 RUN npm run build
 
