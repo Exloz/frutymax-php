@@ -27,6 +27,14 @@ services:
         networks:
             - proxy
             - backend
+    web:
+        image: nginx:stable-alpine
+        depends_on: [ app ]
+        networks: [ proxy, backend ]
+        expose: [ "80" ]
+        volumes:
+            - ./:/var/www/html:ro,Z
+            - ./nginx/conf.d/:/etc/nginx/conf.d:ro,Z
 
         # Labels de Traefik para publicar tu app en https://exloz.site
         labels:
