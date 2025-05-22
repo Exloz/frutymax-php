@@ -42,7 +42,7 @@ services:
             - "traefik.http.routers.exloz.rule=Host(`frutymax.exloz.site`)"
             - "traefik.http.routers.exloz.entrypoints=websecure"
             - "traefik.http.routers.exloz.tls.certresolver=le"
-            - "traefik.http.services.exloz.loadbalancer.server.port=9000"
+            - "traefik.http.services.exloz.loadbalancer.server.port=80"
 
 
     db:
